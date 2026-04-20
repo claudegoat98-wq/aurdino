@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arduino Circuit Simulator Pro</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060b16;--panel:#0b1220;--panel2:#101827;--border:#1a2d45;
+  --accent:#00e5aa;--accent2:#4da6ff;--warn:#ffb347;--danger:#ff5555;
+  --text:#c8daf0;--dim:#4a6080;--green:#00c87a;--red:#ff4455;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif}
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* HEADER */
+header{
+  background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;height:52px;gap:12px;flex-shrink:0;
+}
+header h1{
+  font-size:18px;font-weight:700;letter-spacing:2px;color:var(--accent);
+  font-family:'Share Tech Mono',monospace;text-shadow:0 0 20px #00e5aa55;
+}
+header h1 span{color:var(--dim);font-size:13px;margin-left:8px;letter-spacing:1px}
+.hbtn{
+  padding:6px 16px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--text);font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;transition:all .15s;
+}
+.hbtn:hover{background:var(--panel2);border-color:var(--dim)}
+.hbtn.run{border-color:var(--green);color:var(--green)}
+.hbtn.run:hover{background:#00c87a22}
+.hbtn.stop{border-color:var(--danger);color:var(--danger)}
+.hbtn.stop:hover{background:#ff445522}
+.hbtn.ex{border-color:var(--accent2);color:var(--accent2)}
+.hbtn.ex:hover{background:#4da6ff22}
+.hbtn.clear{border-color:var(--dim);color:var(--dim)}
+.spacer{flex:1}
+.run-indicator{
+  width:10px;height:10px;border-radius:50%;background:#333;
+  border:1px solid #444;transition:all .3s;
+}
+.run-indicator.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* WORKSPACE */
+.workspace{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{
+  width:190px;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;padding:10px 8px;gap:6px;
+}
+.sidebar-title{
+  font-size:10px;letter-spacing:2px;color:var(--dim);padding:4px 6px 2px;
+  font-family:'Share Tech Mono',monospace;
+}
+.comp-card{
+  border:1px solid var(--border);border-radius:8px;padding:10px;
+  cursor:pointer;transition:all .15s;background:var(--panel2);
+  display:flex;align-items:center;gap:10px;position:relative;
+}
+.comp-card:hover{border-color:var(--dim);background:#131d2d}
+.comp-card.active{border-color:var(--accent);background:#00e5aa11;box-shadow:0 0 12px #00e5aa22}
+.comp-card.active-delete{border-color:var(--danger);background:#ff445511}
+.comp-card.active-wire{border-color:var(--accent2);background:#4da6ff11}
+.comp-icon{width:36px;height:36px;flex-shrink:0}
+.comp-info{flex:1;min-width:0}
+.comp-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.5px}
+.comp-desc{font-size:10px;color:var(--dim);letter-spacing:.5px}
+.comp-shortcut{
+  position:absolute;top:6px;right:8px;font-size:9px;color:var(--dim);
+  font-family:'Share Tech Mono',monospace;background:var(--panel);
+  padding:1px 5px;border-radius:3px;border:1px solid var(--border);
+}
+
+/* LED color pickers */
+.led-colors{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.led-dot{
+  width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent;
+  transition:all .15s;
+}
+.led-dot.sel{border-color:#fff;box-shadow:0 0 6px currentColor}
+
+/* Wire colors */
+.wire-colors{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.wcol{
+  width:20px;height:12px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:all .15s;
+}
+.wcol.sel{border-color:#fff}
+
+/* CANVAS AREA */
+.canvas-area{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:var(--bg);padding:12px;position:relative;
+}
+#circuit{border-radius:10px;cursor:crosshair;display:block}
+
+/* Tooltip */
+#tooltip{
+  position:fixed;background:#0e1e32;border:1px solid var(--border);border-radius:6px;
+  padding:5px 10px;font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--accent);
+  pointer-events:none;display:none;z-index:100;white-space:nowrap;
+}
+
+/* Zoom controls */
+.zoom-ctrl{
+  position:absolute;bottom:20px;right:20px;display:flex;flex-direction:column;gap:4px;
+}
+.zbtn{
+  width:32px;height:32px;background:var(--panel);border:1px solid var(--border);
+  border-radius:6px;cursor:pointer;font-size:16px;color:var(--text);
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.zbtn:hover{border-color:var(--dim);background:var(--panel2)}
+
+/* SERIAL MONITOR */
+.serial-wrap{
+  height:130px;background:var(--panel);border-top:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.serial-header{
+  display:flex;align-items:center;gap:8px;padding:6px 14px;
+  border-bottom:1px solid var(--border);
+}
+.serial-title{
+  font-size:11px;letter-spacing:2px;color:var(--dim);font-family:'Share Tech Mono',monospace;
+}
+.serial-dot{width:7px;height:7px;border-radius:50%;background:#333}
+.serial-dot.blink{animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#serial{
+  flex:1;overflow-y:auto;padding:6px 14px;font-family:'Share Tech Mono',monospace;
+  font-size:12px;line-height:1.8;color:#7fff7f;
+}
+#serial .err{color:var(--danger)}
+#serial .info{color:var(--accent2)}
+#serial .dim{color:var(--dim)}
+
+/* Status bar */
+.statusbar{
+  display:flex;align-items:center;gap:16px;padding:4px 14px;
+  background:var(--bg);border-top:1px solid var(--border);font-size:10px;
+  font-family:'Share Tech Mono',monospace;color:var(--dim);flex-shrink:0;
+}
+.statusbar .sb-item span{color:var(--text)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="run-indicator" id="runDot"></div>
+  <h1>ARDUINO <span>CIRCUIT SIMULATOR PRO</span></h1>
+  <div class="spacer"></div>
+  <button class="hbtn ex" onclick="loadExample()">&#9654; LOAD EXAMPLE</button>
+  <button class="hbtn run" id="runBtn" onclick="toggleRun()">&#9654; RUN</button>
+  <button class="hbtn clear" onclick="clearAll()">&#10005; CLEAR</button>
+</header>
+
+<div class="workspace">
+<aside class="sidebar">
+  <div class="sidebar-title">COMPONENTS</div>
+
+  <div class="comp-card active" id="card-LED" onclick="setTool('LED')">
+    <canvas class="comp-icon" id="icon-led" width="36" height="36"></canvas>
+    <div class="comp-info">
+      <div class="comp-name">LED</div>
+      <div class="comp-desc">Light Emitting Diode</div>
+      <div class="led-colors" id="ledColors"></div>
+    </div>
+    <div class="comp-shortcut">L</div>
+  </div>
+
+  <div class="comp-card" id="card-RESISTOR" onclick="setTool('RESISTOR')">
+    <canvas class="comp-icon" id="icon-res" width="36" height="36"></canvas>
+    <div class="comp-info">
+      <div class="comp-name">RESISTOR</div>
+      <div class="comp-desc">220Ω / 10kΩ</div>
+      <div class="led-colors" id="resTypes"></div>
+    </div>
+    <div class="comp-shortcut">R</div>
+  </div>
+
+  <div class="comp-card" id="card-BUTTON" onclick="setTool('BUTTON')">
+    <canvas class="comp-icon" id="icon-btn" width="36" height="36"></canvas>
+    <div class="comp-info">
+      <div class="comp-name">BUTTON</div>
+      <div class="comp-desc">Push switch — right-click to press</div>
+    </div>
+    <div class="comp-shortcut">B</div>
+  </div>
+
+  <div class="comp-card" id="card-WIRE" onclick="setTool('WIRE')">
+    <canvas class="comp-icon" id="icon-wire" width="36" height="36"></canvas>
+    <div class="comp-info">
+      <div class="comp-name">WIRE</div>
+      <div class="comp-desc">Click two points to connect</div>
+      <div class="wire-colors" id="wireColors"></div>
+    </div>
+    <div class="comp-shortcut">W</div>
+  </div>
+
+  <div class="comp-card" id="card-DELETE" onclick="setTool('DELETE')">
+    <canvas class="comp-icon" id="icon-del" width="36" height="36"></canvas>
+    <div class="comp-info">
+      <div class="comp-name">DELETE</div>
+      <div class="comp-desc">Click component or wire</div>
+    </div>
+    <div class="comp-shortcut">D</div>
+  </div>
+
+  <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+    <div class="sidebar-title">INFO</div>
+    <div id="infoBox" style="font-size:11px;color:var(--dim);padding:6px;line-height:1.7;font-family:'Share Tech Mono',monospace">
+      Select a tool<br>and click on the<br>breadboard to place
+    </div>
+  </div>
+</aside>
+
+<div class="canvas-area">
+  <canvas id="circuit"></canvas>
+  <div class="zoom-ctrl">
+    <button class="zbtn" onclick="zoom(1.15)" title="Zoom In">+</button>
+    <button class="zbtn" onclick="zoom(0.87)" title="Zoom Out">-</button>
+    <button class="zbtn" onclick="resetZoom()" title="Reset" style="font-size:11px">1:1</button>
+  </div>
+</div>
+</div>
+
+<div class="serial-wrap">
+  <div class="serial-header">
+    <div class="serial-dot" id="serialDot"></div>
+    <div class="serial-title">SERIAL MONITOR — 9600 BAUD</div>
+    <div class="spacer"></div>
+    <button class="hbtn clear" style="padding:2px 10px;font-size:11px" onclick="clearSerial()">CLEAR</button>
+  </div>
+  <div id="serial"><span class="dim">// Arduino Circuit Simulator Pro — ready</span><br><span class="dim">// Place components, connect wires, then press RUN</span><br><span class="dim">// Right-click a Button to toggle it on/off</span><br></div>
+</div>
+
+<div class="statusbar">
+  <span class="sb-item">TOOL: <span id="sb-tool">LED</span></span>
+  <span class="sb-item">COMPONENTS: <span id="sb-comps">0</span></span>
+  <span class="sb-item">WIRES: <span id="sb-wires">0</span></span>
+  <span class="sb-item" id="sb-pos"></span>
+  <div class="spacer"></div>
+  <span class="sb-item" id="sb-tick"></span>
+</div>
+
+</div>
+<div id="tooltip"></div>
+
+<script>
+// ─── CANVAS SETUP ────────────────────────────────────────────────────
+const cv = document.getElementById('circuit');
+const ctx = cv.getContext('2d');
+let scale = 1;
+const CW = 980, CH = 560;
+cv.width = CW; cv.height = CH;
+cv.style.width = CW+'px'; cv.style.height = CH+'px';
+
+// ─── LAYOUT ──────────────────────────────────────────────────────────
+const ARD = { x:14, y:38, w:148, h:484 };
+const BB  = { x:188, y:56, w:772, h:446 };
+const GRID = 23;
+
+// Breadboard geometry
+const BB_COLS = 30;
+const BB_COL0 = BB.x + 32;
+const BB_COL_STEP = (BB.w - 64) / (BB_COLS - 1);
+
+const BB_ROWS = {
+  'P+': BB.y + 22,
+  'P-': BB.y + 44,
+  'a':  BB.y + 84,
+  'b':  BB.y + 108,
+  'c':  BB.y + 132,
+  'd':  BB.y + 156,
+  'e':  BB.y + 180,
+  'f':  BB.y + 228,
+  'g':  BB.y + 252,
+  'h':  BB.y + 276,
+  'i':  BB.y + 300,
+  'j':  BB.y + 324,
+  'Q+': BB.y + 366,
+  'Q-': BB.y + 390,
+};
+
+// Build hole lookup
+const HOLES = [];
+function buildHoles(){
+  for(let col=0;col<BB_COLS;col++){
+    const x = BB_COL0 + col * BB_COL_STEP;
+    for(const [row, y] of Object.entries(BB_ROWS)){
+      HOLES.push({x, y, col, row, id:`${row}-${col}`});
+    }
+  }
+}
+buildHoles();
+
+function nearestHole(mx, my, maxDist=22){
+  let best=null, bd=Infinity;
+  for(const h of HOLES){
+    const d = Math.hypot(h.x-mx, h.y-my);
+    if(d<bd && d<maxDist){bd=d;best=h;}
+  }
+  return best;
+}
+
+// Arduino pins (right edge, x = ARD.x+ARD.w)
+const APINS = [
+  {name:'GND',  x:ARD.x+ARD.w, y:ARD.y+52,  type:'GND', col:'#888888'},
+  {name:'5V',   x:ARD.x+ARD.w, y:ARD.y+77,  type:'PWR', col:'#ff4455'},
+  {name:'3.3V', x:ARD.x+ARD.w, y:ARD.y+102, type:'PWR', col:'#ff8844'},
+  {name:'D2',   x:ARD.x+ARD.w, y:ARD.y+145, type:'DIG', col:'#7f77dd'},
+  {name:'D3~',  x:ARD.x+ARD.w, y:ARD.y+170, type:'PWM', col:'#9f8fff'},
+  {name:'D4',   x:ARD.x+ARD.w, y:ARD.y+195, type:'DIG', col:'#7f77dd'},
+  {name:'D5~',  x:ARD.x+ARD.w, y:ARD.y+220, type:'PWM', col:'#9f8fff'},
+  {name:'D6~',  x:ARD.x+ARD.w, y:ARD.y+245, type:'PWM', col:'#9f8fff'},
+  {name:'D7',   x:ARD.x+ARD.w, y:ARD.y+270, type:'DIG', col:'#7f77dd'},
+  {name:'D8',   x:ARD.x+ARD.w, y:ARD.y+305, type:'DIG', col:'#7f77dd'},
+  {name:'D9~',  x:ARD.x+ARD.w, y:ARD.y+330, type:'PWM', col:'#9f8fff'},
+  {name:'D10~', x:ARD.x+ARD.w, y:ARD.y+355, type:'PWM', col:'#9f8fff'},
+  {name:'D11~', x:ARD.x+ARD.w, y:ARD.y+380, type:'PWM', col:'#9f8fff'},
+  {name:'D12',  x:ARD.x+ARD.w, y:ARD.y+405, type:'DIG', col:'#7f77dd'},
+  {name:'D13',  x:ARD.x+ARD.w, y:ARD.y+430, type:'DIG', col:'#7f77dd'},
+  {name:'A0',   x:ARD.x+ARD.w, y:ARD.y+463, type:'ANA', col:'#00c87a'},
+];
+
+function nearestPin(mx, my, maxDist=18){
+  let best=null, bd=Infinity;
+  for(const p of APINS){
+    const d=Math.hypot(p.x-mx, p.y-my);
+    if(d<bd&&d<maxDist){bd=d;best=p;}
+  }
+  return best;
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────
+let tool = 'LED';
+let ledColor = '#ff3333';
+let wireColor = '#dd4444';
+let resOhm = 220;
+let running = false;
+let tick = 0;
+let runTimer = null;
+let wireStart = null;
+let hoverPos = null;
+let hoverHole = null;
+let hoverPin = null;
+const components = [];
+const wires = [];
+
+// ─── TOOL SETUP ──────────────────────────────────────────────────────
+const LED_COLORS = [
+  {col:'#ff3333',name:'Red'},
+  {col:'#33ee55',name:'Green'},
+  {col:'#4488ff',name:'Blue'},
+  {col:'#ffee22',name:'Yellow'},
+  {col:'#ff88ff',name:'Pink'},
+  {col:'#ffffff',name:'White'},
+];
+const WIRE_COLORS = ['#dd4444','#222222','#eecc22','#44cc44','#4488ff','#ff8833','#ffffff','#cc44cc'];
+
+function initPalette(){
+  // LED color dots
+  const lc = document.getElementById('ledColors');
+  LED_COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='led-dot'+(c.col===ledColor?' sel':'');
+    d.style.background=c.col;
+    d.style.boxShadow=`0 0 6px ${c.col}`;
+    d.title=c.name;
+    d.onclick=e=>{e.stopPropagation();ledColor=c.col;setTool('LED');renderPalette();};
+    lc.appendChild(d);
+  });
+
+  // Resistor type
+  const rt = document.getElementById('resTypes');
+  [{v:220,label:'220Ω'},{v:10000,label:'10kΩ'}].forEach(r=>{
+    const d=document.createElement('div');
+    d.style.cssText='font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;border:1px solid #334;color:#aaa;font-family:monospace;';
+    d.textContent=r.label;
+    if(r.v===resOhm) d.style.borderColor='#ff8844'; 
+    d.onclick=e=>{e.stopPropagation();resOhm=r.v;setTool('RESISTOR');renderPalette();};
+    rt.appendChild(d);
+  });
+
+  // Wire colors
+  const wc = document.getElementById('wireColors');
+  WIRE_COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='wcol'+(c===wireColor?' sel':'');
+    d.style.background=c==='#222222'?'#555':c;
+    d.onclick=e=>{e.stopPropagation();wireColor=c;setTool('WIRE');renderPalette();};
+    wc.appendChild(d);
+  });
+
+  drawIcons();
+}
+
+function renderPalette(){
+  document.getElementById('ledColors').innerHTML='';
+  document.getElementById('resTypes').innerHTML='';
+  document.getElementById('wireColors').innerHTML='';
+  initPalette();
+  ['LED','RESISTOR','BUTTON','WIRE','DELETE'].forEach(t=>{
+    const card=document.getElementById('card-'+t);
+    card.className='comp-card'+(t===tool?(t==='DELETE'?' active-delete':t==='WIRE'?' active-wire':' active'):'');
+  });
+}
+
+function drawIcons(){
+  drawLEDIcon();drawResIcon();drawBtnIcon();drawWireIcon();drawDelIcon();
+}
+
+function drawLEDIcon(){
+  const c=document.getElementById('icon-led');
+  if(!c)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,36,36);
+  x.save();
+  x.shadowColor=ledColor; x.shadowBlur=8;
+  x.fillStyle=ledColor;
+  x.beginPath(); x.moveTo(8,28); x.lineTo(28,28); x.lineTo(18,10); x.closePath(); x.fill();
+  x.restore();
+  x.strokeStyle=ledColor; x.lineWidth=2;
+  x.beginPath(); x.moveTo(8,28); x.lineTo(28,28); x.stroke();
+  x.strokeStyle='#555'; x.lineWidth=1.5;
+  x.beginPath(); x.moveTo(13,28); x.lineTo(13,34); x.moveTo(23,28); x.lineTo(23,34); x.stroke();
+}
+function drawResIcon(){
+  const c=document.getElementById('icon-res');
+  if(!c)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,36,36);
+  x.strokeStyle='#888'; x.lineWidth=1.5;
+  x.beginPath(); x.moveTo(3,18); x.lineTo(8,18); x.stroke();
+  x.beginPath(); x.moveTo(28,18); x.lineTo(33,18); x.stroke();
+  x.fillStyle='#d4a84b';
+  x.fillRect(8,13,20,10);
+  [['#cc3333',10],['#cc8800',14],['#ffcc00',18]].forEach(([col,px])=>{
+    x.fillStyle=col; x.fillRect(px,13,2,10);
+  });
+  x.strokeStyle='#8a6820'; x.lineWidth=1;
+  x.strokeRect(8,13,20,10);
+}
+function drawBtnIcon(){
+  const c=document.getElementById('icon-btn');
+  if(!c)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,36,36);
+  x.fillStyle='#1a3a2a'; x.fillRect(4,4,28,28);
+  x.fillStyle='#00c87a'; 
+  x.beginPath(); x.roundRect(9,9,18,18,3); x.fill();
+  x.strokeStyle='#00e5aa'; x.lineWidth=1; x.stroke();
+  x.fillStyle='#fff'; x.font='bold 8px monospace'; x.fillText('ON',12,21);
+  x.strokeStyle='#555'; x.lineWidth=1.5;
+  [[6,4],[6,32],[30,4],[30,32]].forEach(([px,py])=>{
+    x.beginPath(); x.arc(px,py,2,0,Math.PI*2); x.fillStyle='#888'; x.fill();
+  });
+}
+function drawWireIcon(){
+  const c=document.getElementById('icon-wire');
+  if(!c)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,36,36);
+  const col=wireColor==='#222222'?'#666':wireColor;
+  x.strokeStyle=col; x.lineWidth=3; x.lineCap='round';
+  x.beginPath(); x.moveTo(4,28); x.lineTo(4,18); x.lineTo(32,18); x.lineTo(32,8); x.stroke();
+  x.fillStyle=col;
+  x.beginPath(); x.arc(4,28,4,0,Math.PI*2); x.fill();
+  x.beginPath(); x.arc(32,8,4,0,Math.PI*2); x.fill();
+}
+function drawDelIcon(){
+  const c=document.getElementById('icon-del');
+  if(!c)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,36,36);
+  x.strokeStyle='#ff5555'; x.lineWidth=2.5; x.lineCap='round';
+  x.beginPath(); x.moveTo(8,8); x.lineTo(28,28); x.stroke();
+  x.beginPath(); x.moveTo(28,8); x.lineTo(8,28); x.stroke();
+}
+
+function setTool(t){
+  tool=t;
+  wireStart=null;
+  const infos={
+    LED:`Place LED on breadboard.\nCurrent: ${LED_COLORS.find(c=>c.col===ledColor)?.name||''} LED`,
+    RESISTOR:`Place ${resOhm===220?'220Ω (current limit)':'10kΩ (pull-up)'}\nresistor on breadboard`,
+    BUTTON:`Place push button.\nRight-click to press/release`,
+    WIRE:`Click two points to\ndraw a wire connection`,
+    DELETE:`Click any component\nor wire to remove it`,
+  };
+  document.getElementById('infoBox').textContent=infos[t]||'';
+  document.getElementById('sb-tool').textContent=t;
+  renderPalette();
+}
+
+// ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  const map={l:'LED',r:'RESISTOR',b:'BUTTON',w:'WIRE',d:'DELETE'};
+  if(map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
+  if(e.key==='Escape'){ wireStart=null; draw(); }
+});
+
+// ─── CANVAS EVENTS ───────────────────────────────────────────────────
+cv.addEventListener('mousemove', e=>{
+  const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width;
+  const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sx;
+  hoverPos={x:mx,y:my};
+  hoverHole=nearestHole(mx,my,22);
+  hoverPin=nearestPin(mx,my,18);
+
+  // Tooltip
+  const tip=document.getElementById('tooltip');
+  if(hoverPin){
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+    tip.textContent=`${hoverPin.name} [${hoverPin.type}]`;
+  } else if(hoverHole){
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+    tip.textContent=`${hoverHole.row.toUpperCase()}${hoverHole.col+1}`;
+  } else {
+    tip.style.display='none';
+  }
+
+  const r2=cv.getBoundingClientRect();
+  document.getElementById('sb-pos').textContent=`X:${Math.round(mx)} Y:${Math.round(my)}`;
+  draw();
+});
+
+cv.addEventListener('mouseleave',()=>{
+  hoverPos=null; hoverHole=null; hoverPin=null;
+  document.getElementById('tooltip').style.display='none';
+  draw();
+});
+
+cv.addEventListener('click', e=>{
+  const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width;
+  const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sx;
+
+  if(tool==='DELETE'){
+    const comp=compAt(mx,my);
+    if(comp){ components.splice(components.indexOf(comp),1); updateStatus(); draw(); return; }
+    const wire=wireAt(mx,my);
+    if(wire){ wires.splice(wires.indexOf(wire),1); updateStatus(); draw(); return; }
+    return;
+  }
+
+  if(tool==='WIRE'){
+    const pin=nearestPin(mx,my,18);
+    const hole=nearestHole(mx,my,22);
+    const pt = pin?{x:pin.x,y:pin.y,label:pin.name} : hole?{x:hole.x,y:hole.y,label:hole.row+(hole.col+1)} : {x:Math.round(mx/10)*10, y:Math.round(my/10)*10};
+    if(!wireStart){
+      wireStart=pt;
+      document.getElementById('infoBox').textContent='Click second point\nto complete wire';
+    } else {
+      wires.push({x1:wireStart.x,y1:wireStart.y,x2:pt.x,y2:pt.y,col:wireColor});
+      wireStart=null;
+      document.getElementById('infoBox').textContent='Wire placed!\nClick to start another';
+      updateStatus(); draw();
+    }
+    return;
+  }
+
+  // Place component — only on breadboard holes or near board
+  const hole=nearestHole(mx,my,24);
+  if(!hole) return;
+  const n=components.filter(c=>c.type===tool).length+1;
+  components.push({
+    type:tool, x:hole.x, y:hole.y, hole:hole.id,
+    on:false, pressed:false,
+    label:tool[0]+n,
+    col:tool==='LED'?ledColor:null,
+    ohm:tool==='RESISTOR'?resOhm:null,
+  });
+  logSerial(`// ${tool}${n} placed at ${hole.row.toUpperCase()}${hole.col+1}`,'info');
+  updateStatus(); draw();
+});
+
+cv.addEventListener('contextmenu', e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width;
+  const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sx;
+  const comp=compAt(mx,my);
+  if(comp&&comp.type==='BUTTON'){
+    comp.pressed=!comp.pressed;
+    logSerial(`// Button ${comp.label} ${comp.pressed?'PRESSED':'RELEASED'}`,'info');
+    draw();
+  }
+});
+
+function compAt(mx,my){
+  return components.find(c=>Math.hypot(c.x-mx,c.y-my)<20);
+}
+
+function wireAt(mx,my){
+  return wires.find(w=>ptSegDist(mx,my,w.x1,w.y1,w.x2,w.y2)<9);
+}
+
+function ptSegDist(px,py,x1,y1,x2,y2){
+  const dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy;
+  if(l2===0)return Math.hypot(px-x1,py-y1);
+  const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/l2));
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
+
+// ─── SIMULATION ──────────────────────────────────────────────────────
+function toggleRun(){
+  running=!running;
+  const btn=document.getElementById('runBtn');
+  const dot=document.getElementById('runDot');
+  const sd=document.getElementById('serialDot');
+  if(running){
+    btn.textContent='⏹ STOP'; btn.className='hbtn stop';
+    dot.classList.add('on'); sd.classList.add('blink');
+    tick=0;
+    logSerial('sketch_start: void setup() { pinMode(13,OUTPUT); }','info');
+    logSerial('loop() running at 2Hz...','dim');
+    runTimer=setInterval(simulate,500);
+  } else {
+    btn.textContent='▶ RUN'; btn.className='hbtn run';
+    dot.classList.remove('on'); sd.classList.remove('blink');
+    clearInterval(runTimer);
+    components.forEach(c=>{c.on=false;});
+    logSerial('// Sketch stopped','dim');
+    document.getElementById('sb-tick').textContent='';
+    draw();
+  }
+}
+
+function simulate(){
+  tick++;
+  const leds=components.filter(c=>c.type==='LED');
+  const btns=components.filter(c=>c.type==='BUTTON');
+  if(leds.length===0){
+    logSerial(`[${tick}] loop() — no LED connected`);
+    draw(); return;
+  }
+  leds.forEach((led,i)=>{
+    const connected=wires.some(w=>
+      Math.hypot(w.x1-led.x,w.y1-led.y)<30||Math.hypot(w.x2-led.x,w.y2-led.y)<30
+    );
+    if(!connected){led.on=false;return;}
+    if(btns.length>0){
+      led.on=btns[i%btns.length].pressed;
+    } else {
+      led.on=(tick%2===(i%2));
+    }
+  });
+  const active=leds.filter(l=>l.on).map(l=>l.label);
+  if(active.length){
+    logSerial(`[${tick}] digitalWrite → HIGH: ${active.join(', ')}`);
+  } else {
+    logSerial(`[${tick}] digitalWrite → LOW (all off)`,'dim');
+  }
+  document.getElementById('sb-tick').textContent=`TICK:${tick} | ${(tick*0.5).toFixed(1)}s`;
+  draw();
+}
+
+// ─── DRAWING ─────────────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  drawBG();
+  drawBreadboard();
+  drawArduino();
+  drawWires();
+  drawComponents();
+  drawWirePreview();
+  drawHover();
+}
+
+function drawBG(){
+  // dark workspace with subtle grid
+  ctx.fillStyle='#07101a';
+  ctx.fillRect(0,0,CW,CH);
+  ctx.strokeStyle='#0e1d2a';
+  ctx.lineWidth=1;
+  for(let x=0;x<CW;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,CH);ctx.stroke();}
+  for(let y=0;y<CH;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(CW,y);ctx.stroke();}
+}
+
+function drawArduino(){
+  const {x,y,w,h}=ARD;
+  // PCB body
+  ctx.fillStyle='#1a4d1a';
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,8); ctx.fill();
+  // PCB edge highlight
+  ctx.strokeStyle='#2a7a2a';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,8); ctx.stroke();
+  // Inner border
+  ctx.strokeStyle='#1f5f1f';
+  ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(x+4,y+4,w-8,h-8,5); ctx.stroke();
+
+  // ── USB Port
+  ctx.fillStyle='#3a3a3a';
+  ctx.beginPath(); ctx.roundRect(x-16,y+10,20,30,3); ctx.fill();
+  ctx.fillStyle='#555';
+  ctx.fillRect(x-14,y+13,14,8);
+  ctx.fillStyle='#aaa';
+  ctx.font='6px monospace'; ctx.fillStyle='#777';
+  ctx.fillText('USB',x-14,y+33);
+
+  // ── Barrel Jack
+  ctx.fillStyle='#2a2a2a';
+  ctx.beginPath(); ctx.roundRect(x-18,y+56,22,14,4); ctx.fill();
+  ctx.fillStyle='#555';
+  ctx.beginPath(); ctx.arc(x-6,y+63,4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(x-6,y+63,2,0,Math.PI*2); ctx.fill();
+
+  // ── ATmega chip
+  const cx2=x+w/2-10, cy=y+h*0.42, cw=52, ch=40;
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.roundRect(cx2,cy,cw,ch,2); ctx.fill();
+  ctx.strokeStyle='#333'; ctx.lineWidth=0.5; ctx.stroke();
+  // chip pins left
+  for(let i=0;i<7;i++){ctx.fillStyle='#888';ctx.fillRect(cx2-4,cy+4+i*5,4,3);}
+  // chip pins right
+  for(let i=0;i<7;i++){ctx.fillStyle='#888';ctx.fillRect(cx2+cw,cy+4+i*5,4,3);}
+  ctx.fillStyle='#7f77dd'; ctx.font='bold 7px monospace';
+  ctx.fillText('ATmega328P',cx2+4,cy+14);
+  ctx.fillStyle='#555'; ctx.font='6px monospace';
+  ctx.fillText('ARDUINO',cx2+8,cy+26);
+  // notch
+  ctx.fillStyle='#1a4d1a';
+  ctx.beginPath(); ctx.arc(cx2+6,cy,5,0,Math.PI); ctx.fill();
+
+  // ── Crystal
+  ctx.fillStyle='#b0b0b0';
+  ctx.fillRect(x+w*0.6,y+h*0.42-18,8,22);
+  ctx.strokeStyle='#888'; ctx.lineWidth=0.5;
+  ctx.strokeRect(x+w*0.6,y+h*0.42-18,8,22);
+
+  // ── Reset button
+  ctx.fillStyle='#cc2222';
+  ctx.beginPath(); ctx.arc(x+18,y+h-28,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ff4444';
+  ctx.beginPath(); ctx.arc(x+18,y+h-28,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffaaaa'; ctx.font='6px monospace';
+  ctx.fillText('RST',x+9,y+h-16);
+
+  // ── Power LED (green when running)
+  ctx.fillStyle=running?'#00ff44':'#005500';
+  ctx.shadowColor=running?'#00ff44':'transparent';
+  ctx.shadowBlur=running?10:0;
+  ctx.beginPath(); ctx.arc(x+w-16,y+h-28,4,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#55ff88'; ctx.font='5px monospace';
+  ctx.fillText('PWR',x+w-26,y+h-16);
+
+  // ── Pin 13 LED (orange, blinks with simulation)
+  const p13led=running&&components.some(c=>c.type==='LED'&&c.on);
+  ctx.fillStyle=p13led?'#ffcc00':'#443300';
+  ctx.shadowColor=p13led?'#ffcc00':'transparent';
+  ctx.shadowBlur=p13led?8:0;
+  ctx.beginPath(); ctx.arc(x+w-28,y+h-28,4,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#ffaa44'; ctx.font='5px monospace';
+  ctx.fillText('L',x+w-31,y+h-16);
+
+  // ── Label
+  ctx.save();
+  ctx.fillStyle='#ffffff22';
+  ctx.font='bold 11px monospace';
+  ctx.save(); ctx.translate(x+w/2,y+h*0.72); ctx.rotate(-Math.PI/2);
+  ctx.fillText('ARDUINO UNO',0,0); ctx.restore();
+
+  // ── Pins on right side
+  const pRailY = y+38;
+  // pin header visual
+  ctx.fillStyle='#000';
+  ctx.fillRect(x+w-4, y+38, 10, APINS.length>0? APINS[APINS.length-1].y - y - 28:300);
+
+  APINS.forEach(p=>{
+    // pin hole
+    ctx.fillStyle='#ccaa44';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
+    // connector dot
+    ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill();
+    // label
+    ctx.fillStyle=p.col; ctx.font='bold 9px monospace';
+    ctx.fillText(p.name, x+4, p.y+3);
+    // PWM marker
+    if(p.type==='PWM'){
+      ctx.fillStyle='#9f8fff44';
+      ctx.fillRect(x+w+2,p.y-5,4,10);
+    }
+  });
+
+  // Headers label
+  ctx.fillStyle='#2a6a2a'; ctx.font='bold 7px monospace';
+  ctx.fillText('DIGITAL I/O', x+w+8, APINS[3].y-6);
+  ctx.fillText('POWER', x+w+8, APINS[0].y-6);
+  ctx.fillText('ANALOG', x+w+8, APINS[APINS.length-1].y-6);
+  ctx.restore();
+}
+
+function drawBreadboard(){
+  const {x,y,w,h}=BB;
+  // shadow
+  ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.roundRect(x+6,y+6,w,h,10); ctx.fill();
+  // body (cream plastic)
+  const bg = ctx.createLinearGradient(x,y,x,y+h);
+  bg.addColorStop(0,'#f5f0e8'); bg.addColorStop(1,'#ede8dc');
+  ctx.fillStyle=bg;
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.fill();
+  ctx.strokeStyle='#c8c0b0'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.stroke();
+
+  // Power rail TOP (red + stripe)
+  const railH=30;
+  ctx.fillStyle='#ffeeee';
+  ctx.fillRect(x+14,y+8,w-28,railH);
+  ctx.strokeStyle='#ff9999'; ctx.lineWidth=0.5;
+  ctx.strokeRect(x+14,y+8,w-28,railH);
+
+  // Red stripe
+  ctx.fillStyle='#cc0000';
+  ctx.fillRect(x+14,y+10,w-28,3);
+  // Blue stripe
+  ctx.fillStyle='#0000cc';
+  ctx.fillRect(x+14,y+34,w-28,3);
+
+  // Power rail BOTTOM (red + blue)
+  ctx.fillStyle='#ffeeee';
+  ctx.fillRect(x+14,y+h-railH-8,w-28,railH);
+  ctx.strokeStyle='#ff9999'; ctx.lineWidth=0.5;
+  ctx.strokeRect(x+14,y+h-railH-8,w-28,railH);
+  ctx.fillStyle='#cc0000';
+  ctx.fillRect(x+14,y+h-railH-8+2,w-28,3);
+  ctx.fillStyle='#0000cc';
+  ctx.fillRect(x+14,y+h-railH-8+16,w-28,3);
+
+  // Main area (white)
+  const mainT=y+48, mainH=h-100;
+  ctx.fillStyle='#f8f8f4';
+  ctx.fillRect(x+14,mainT,w-28,mainH);
+
+  // Center divider groove
+  const midY = (BB_ROWS['e']+BB_ROWS['f'])/2;
+  ctx.fillStyle='#c8c0b0';
+  ctx.fillRect(x+14,midY-7,w-28,14);
+  ctx.fillStyle='#b8b0a0';
+  ctx.fillRect(x+14,midY-5,w-28,10);
+
+  // Column numbers at top and bottom
+  ctx.font='bold 8px monospace'; ctx.textAlign='center';
+  for(let c=0;c<BB_COLS;c++){
+    const hx=BB_COL0+c*BB_COL_STEP;
+    if(c%5===0||c===BB_COLS-1){
+      ctx.fillStyle='#888';
+      ctx.fillText(c+1, hx, y+50);
+      ctx.fillText(c+1, hx, y+h-6);
+    }
+  }
+  ctx.textAlign='left';
+
+  // Row letters
+  const rowLetters = {a:'A',b:'B',c:'C',d:'D',e:'E',f:'F',g:'G',h:'H',i:'I',j:'J'};
+  ctx.font='bold 9px monospace'; ctx.fillStyle='#888';
+  for(const [row,ry] of Object.entries(BB_ROWS)){
+    if(rowLetters[row]){
+      ctx.fillText(rowLetters[row], x+4, ry+3);
+      ctx.fillText(rowLetters[row], x+w-12, ry+3);
+    }
+    if(row==='P+'||row==='Q+'){ctx.fillStyle='#cc0000'; ctx.fillText('+',x+16,ry+3); ctx.fillStyle='#888';}
+    if(row==='P-'||row==='Q-'){ctx.fillStyle='#0000cc'; ctx.fillText('-',x+16,ry+3); ctx.fillStyle='#888';}
+  }
+
+  // Draw all holes
+  for(const h of HOLES){
+    const isRail = h.row==='P+'||h.row==='P-'||h.row==='Q+'||h.row==='Q-';
+    const isHover = hoverHole && hoverHole.id===h.id;
+    ctx.fillStyle = isHover?'#668':isRail?'#aaa':'#8a8478';
+    ctx.beginPath();
+    ctx.ellipse(h.x, h.y, isRail?2.5:2.8, isRail?2:2.2, 0, 0, Math.PI*2);
+    ctx.fill();
+    if(isHover){
+      ctx.strokeStyle='#7f77dd';
+      ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(h.x,h.y,7,0,Math.PI*2); ctx.stroke();
+    }
+  }
+
+  // "BREADBOARD" label
+  ctx.fillStyle='#aaa890';
+  ctx.font='bold 9px monospace'; ctx.textAlign='center';
+  ctx.fillText('BREADBOARD 830 TIE POINTS', x+w/2, y+h-2);
+  ctx.textAlign='left';
+}
+
+function drawWires(){
+  wires.forEach(w=>{
+    // Manhattan routing (right-angle)
+    ctx.save();
+    ctx.strokeStyle=w.col==='#222222'?'#555':w.col;
+    ctx.lineWidth=3; ctx.lineCap='round'; ctx.lineJoin='round';
+    // Draw as L-shape (go horizontal then vertical)
+    ctx.beginPath();
+    ctx.moveTo(w.x1,w.y1);
+    ctx.lineTo(w.x2,w.y1); // horizontal
+    ctx.lineTo(w.x2,w.y2); // vertical
+    ctx.stroke();
+    // insulation shine
+    ctx.strokeStyle='rgba(255,255,255,0.12)';
+    ctx.lineWidth=1;
+    ctx.stroke();
+    ctx.restore();
+    // End caps
+    [{ x:w.x1,y:w.y1 },{ x:w.x2,y:w.y2 }].forEach(p=>{
+      ctx.fillStyle=w.col==='#222222'?'#666':w.col;
+      ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.3)';
+      ctx.beginPath(); ctx.arc(p.x-1,p.y-1,2,0,Math.PI*2); ctx.fill();
+    });
+  });
+}
+
+function drawComponents(){
+  components.forEach(c=>{
+    if(c.type==='LED') drawLED(c);
+    else if(c.type==='RESISTOR') drawResistor(c);
+    else if(c.type==='BUTTON') drawButton(c);
+  });
+}
+
+function drawLED(c){
+  const glow = c.on && running;
+  const col = c.col||'#ff3333';
+  ctx.save();
+
+  // Outer glow
+  if(glow){
+    ctx.shadowColor=col; ctx.shadowBlur=30;
+    ctx.fillStyle=col+'33';
+    ctx.beginPath(); ctx.arc(c.x,c.y,22,0,Math.PI*2); ctx.fill();
+  }
+
+  // Leads
+  ctx.strokeStyle='#888'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(c.x-6,c.y+12); ctx.lineTo(c.x-6,c.y+22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(c.x+6,c.y+12); ctx.lineTo(c.x+6,c.y+22); ctx.stroke();
+  // Anode/Cathode labels
+  ctx.fillStyle='#666'; ctx.font='7px monospace';
+  ctx.fillText('A',c.x-14,c.y+20); ctx.fillText('K',c.x+8,c.y+20);
+
+  // LED body (dome shape)
+  ctx.shadowColor=glow?col:'transparent'; ctx.shadowBlur=glow?20:0;
+
+  // Triangle (diode symbol)
+  ctx.fillStyle=glow?col:col+'77';
+  ctx.beginPath();
+  ctx.moveTo(c.x-10,c.y+12); ctx.lineTo(c.x+10,c.y+12); ctx.lineTo(c.x,c.y-4);
+  ctx.closePath(); ctx.fill();
+
+  // Bar line
+  ctx.strokeStyle=glow?'#fff':col; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(c.x-10,c.y+12); ctx.lineTo(c.x+10,c.y+12); ctx.stroke();
+
+  // Dome
+  ctx.fillStyle=glow?col:col+'99';
+  ctx.beginPath(); ctx.ellipse(c.x,c.y-4,10,12,0,-Math.PI,0); ctx.fill();
+
+  // Highlight on dome
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.beginPath(); ctx.ellipse(c.x-3,c.y-6,3,5,0,-Math.PI,0); ctx.fill();
+
+  // Emission rays when on
+  if(glow){
+    ctx.strokeStyle=col+'88'; ctx.lineWidth=1.5;
+    [[-20,-20],[-14,-26],[0,-28],[14,-26],[20,-20]].forEach(([dx,dy])=>{
+      ctx.beginPath();
+      ctx.moveTo(c.x+dx*0.4,c.y+dy*0.4);
+      ctx.lineTo(c.x+dx,c.y+dy); ctx.stroke();
+    });
+  }
+  ctx.shadowBlur=0;
+
+  // Label
+  ctx.fillStyle=glow?col:'#ccc';
+  ctx.font='bold 9px monospace'; ctx.textAlign='center';
+  ctx.fillText(c.label,c.x,c.y+32);
+  ctx.fillStyle='#888'; ctx.font='7px monospace';
+  ctx.fillText('LED',c.x,c.y+40); ctx.textAlign='left';
+  ctx.restore();
+}
+
+function drawResistor(c){
+  // Leads
+  ctx.strokeStyle='#888'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(c.x-20,c.y); ctx.lineTo(c.x-13,c.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(c.x+13,c.y); ctx.lineTo(c.x+20,c.y); ctx.stroke();
+
+  // Body
+  const bg = ctx.createLinearGradient(c.x-13,c.y-7,c.x-13,c.y+7);
+  bg.addColorStop(0,'#e8c870'); bg.addColorStop(0.4,'#d4a84b'); bg.addColorStop(1,'#b88630');
+  ctx.fillStyle=bg;
+  ctx.beginPath(); ctx.roundRect(c.x-13,c.y-7,26,14,4); ctx.fill();
+  ctx.strokeStyle='#8a6820'; ctx.lineWidth=1; ctx.stroke();
+
+  // Color bands
+  const bands = c.ohm===220?
+    ['#cc3333','#cc3333','#8B4513','#ccaa00']:
+    ['#8B4513','#000000','#cc9900','#ccaa00'];
+  bands.forEach((col,i)=>{
+    ctx.fillStyle=col;
+    ctx.fillRect(c.x-9+i*6,c.y-7,4,14);
+  });
+  // Last tolerance band (gold)
+  ctx.fillStyle='#ccaa00';
+  ctx.fillRect(c.x+8,c.y-7,3,14);
+
+  // Label
+  ctx.fillStyle='#ccc'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+  ctx.fillText(c.label,c.x,c.y-12);
+  ctx.fillStyle='#888'; ctx.font='7px monospace';
+  ctx.fillText(c.ohm===220?'220Ω':'10kΩ',c.x,c.y+18); ctx.textAlign='left';
+}
+
+function drawButton(c){
+  const pressed=c.pressed;
+  // PCB pad area
+  ctx.fillStyle='#1a3a1a';
+  ctx.beginPath(); ctx.roundRect(c.x-16,c.y-16,32,32,3); ctx.fill();
+
+  // Corner pins
+  [[-12,-12],[12,-12],[-12,12],[12,12]].forEach(([dx,dy])=>{
+    ctx.fillStyle='#ccaa44';
+    ctx.fillRect(c.x+dx-3,c.y+dy-3,6,6);
+  });
+  // leads down
+  ctx.strokeStyle='#888'; ctx.lineWidth=1.5;
+  [[-12,16],[12,16]].forEach(([dx,dy])=>{
+    ctx.beginPath(); ctx.moveTo(c.x+dx,c.y+14); ctx.lineTo(c.x+dx,c.y+22); ctx.stroke();
+  });
+
+  // Button body
+  ctx.fillStyle=pressed?'#003320':'#002215';
+  ctx.beginPath(); ctx.roundRect(c.x-12,c.y-12,24,24,3); ctx.fill();
+  ctx.strokeStyle=pressed?'#00e5aa':'#005500'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Button cap
+  ctx.fillStyle=pressed?'#00c87a':'#004400';
+  ctx.beginPath(); ctx.roundRect(c.x-9,c.y-9+(pressed?2:0),18,18,3); ctx.fill();
+  ctx.strokeStyle=pressed?'#00ffcc':'#007700'; ctx.lineWidth=1; ctx.stroke();
+
+  // Status indicator
+  if(pressed){
+    ctx.fillStyle='#00e5aa33';
+    ctx.beginPath(); ctx.arc(c.x,c.y+(pressed?1:0),8,0,Math.PI*2); ctx.fill();
+  }
+
+  // Label
+  ctx.fillStyle='#fff'; ctx.font='bold 8px monospace'; ctx.textAlign='center';
+  ctx.fillText(c.label,c.x,c.y+(pressed?6:4));
+  ctx.fillStyle=pressed?'#00e5aa':'#888'; ctx.font='8px monospace';
+  ctx.fillText(pressed?'ON':'OFF',c.x,c.y+30); ctx.textAlign='left';
+}
+
+function drawWirePreview(){
+  if(!wireStart||!hoverPos) return;
+  const col=wireColor==='#222222'?'#555':wireColor;
+  ctx.save();
+  ctx.strokeStyle=col+'88'; ctx.setLineDash([6,6]); ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(wireStart.x,wireStart.y);
+  ctx.lineTo(hoverPos.x,wireStart.y);
+  ctx.lineTo(hoverPos.x,hoverPos.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  // Start indicator
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.arc(wireStart.x,wireStart.y,6,0,Math.PI*2); ctx.fill();
+}
+
+function drawHover(){
+  if(!hoverPos||tool==='WIRE'||tool==='DELETE') return;
+  const h=hoverHole;
+  if(!h) return;
+  ctx.save();
+  ctx.globalAlpha=0.55;
+  if(tool==='LED'){
+    ctx.fillStyle=ledColor;
+    ctx.beginPath(); ctx.moveTo(h.x-8,h.y+8); ctx.lineTo(h.x+8,h.y+8); ctx.lineTo(h.x,h.y-6); ctx.closePath(); ctx.fill();
+  } else if(tool==='RESISTOR'){
+    ctx.fillStyle='#d4a84b';
+    ctx.fillRect(h.x-10,h.y-5,20,10);
+  } else if(tool==='BUTTON'){
+    ctx.fillStyle='#00c87a';
+    ctx.beginPath(); ctx.roundRect(h.x-9,h.y-9,18,18,3); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── UTILITY ─────────────────────────────────────────────────────────
+function clearAll(){
+  components.length=0; wires.length=0; wireStart=null;
+  if(running) toggleRun();
+  logSerial('// Circuit cleared','info');
+  updateStatus(); draw();
+}
+
+function clearSerial(){
+  document.getElementById('serial').innerHTML='<span class="dim">// Serial Monitor cleared</span><br>';
+}
+
+function updateStatus(){
+  document.getElementById('sb-comps').textContent=components.length;
+  document.getElementById('sb-wires').textContent=wires.length;
+}
+
+function logSerial(msg, cls=''){
+  const el=document.getElementById('serial');
+  const span=document.createElement('span');
+  span.className=cls;
+  span.textContent=msg;
+  el.appendChild(span);
+  el.appendChild(document.createTextNode('\n'));
+  el.scrollTop=el.scrollHeight;
+}
+
+function zoom(factor){
+  scale*=factor; scale=Math.max(0.4,Math.min(2.5,scale));
+  cv.style.width=Math.round(CW*scale)+'px';
+  cv.style.height=Math.round(CH*scale)+'px';
+}
+function resetZoom(){
+  scale=1;
+  cv.style.width=CW+'px';
+  cv.style.height=CH+'px';
+}
+
+function loadExample(){
+  clearAll();
+  // Blink circuit: LED on D13 with resistor
+  const h1=HOLES.find(h=>h.row==='e'&&h.col===14);
+  const h2=HOLES.find(h=>h.row==='e'&&h.col===16);
+  const h3=HOLES.find(h=>h.row==='a'&&h.col===16);
+  const h4=HOLES.find(h=>h.row==='a'&&h.col===14);
+  if(h1) components.push({type:'LED',x:h1.x,y:h1.y,hole:h1.id,on:false,pressed:false,label:'L1',col:'#ff3333',ohm:null});
+  if(h2) components.push({type:'RESISTOR',x:h2.x,y:h2.y,hole:h2.id,on:false,pressed:false,label:'R1',col:null,ohm:220});
+  const pin13=APINS.find(p=>p.name==='D13');
+  const pinGND=APINS.find(p=>p.name==='GND');
+  if(pin13&&h2) wires.push({x1:pin13.x,y1:pin13.y,x2:h2.x,y2:h2.y,col:'#dd4444'});
+  if(h1&&pinGND) wires.push({x1:pinGND.x,y1:pinGND.y,x2:h1.x+6,y2:h1.y,col:'#555'});
+
+  logSerial('// Example loaded: LED Blink','info');
+  logSerial('// D13 → 220Ω Resistor → LED → GND','dim');
+  logSerial('// Press RUN to start','dim');
+  updateStatus(); draw();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+initPalette();
+draw();
+</script>
+</body>
+</html>
